@@ -1,161 +1,23 @@
--- ============================================
--- PLATFORM-WIDE ANALYTICS FUNCTIONS (SUPER ADMIN)
--- ============================================
+-- ========================================
+-- COPY THIS ENTIRE FILE TO SUPABASE
+-- ========================================
+-- Instructions:
+-- 1. Select ALL text in this file (Ctrl+A)
+-- 2. Copy it (Ctrl+C)
+-- 3. Go to Supabase Dashboard → SQL Editor
+-- 4. Click "New Query"
+-- 5. Paste (Ctrl+V)
+-- 6. Click "Run" or press Ctrl+Enter
+-- 7. Wait for success message
+-- ========================================
 
--- Function to get platform-wide daily analytics
-CREATE OR REPLACE FUNCTION get_platform_analytics(
-    p_start_date TIMESTAMP WITH TIME ZONE,
-    p_end_date TIMESTAMP WITH TIME ZONE
-)
-RETURNS TABLE (
-    date DATE,
-    tryons_count BIGINT,
-    credits_used NUMERIC,
-    unique_users UUID[]
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        DATE(th.created_at) AS date,
-        COUNT(th.id) AS tryons_count,
-        SUM(th.credits_used) AS credits_used,
-        ARRAY_AGG(DISTINCT th.user_id) AS unique_users
-    FROM
-        tryon_history th
-    WHERE
-        th.created_at >= p_start_date AND th.created_at <= p_end_date
-    GROUP BY
-        DATE(th.created_at)
-    ORDER BY
-        DATE(th.created_at);
-END;
-$$;
+-- Drop existing functions if they exist (to avoid conflicts)
+DROP FUNCTION IF EXISTS get_store_comparison_metrics(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE);
+DROP FUNCTION IF EXISTS get_store_performance_trends(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID);
+DROP FUNCTION IF EXISTS get_store_rankings(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, TEXT);
+DROP FUNCTION IF EXISTS get_store_health_indicators(INT);
 
--- Function to get platform-wide top users
-CREATE OR REPLACE FUNCTION get_platform_top_users(
-    p_limit INT DEFAULT 10,
-    p_start_date TIMESTAMP WITH TIME ZONE DEFAULT '1970-01-01 00:00:00+00'
-)
-RETURNS TABLE (
-    user_name TEXT,
-    tryons_count BIGINT,
-    credits_used NUMERIC
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        COALESCE(p.name, p.email) AS user_name,
-        COUNT(th.id) AS tryons_count,
-        SUM(th.credits_used) AS credits_used
-    FROM
-        tryon_history th
-    JOIN
-        profiles p ON th.user_id = p.id
-    WHERE
-        th.created_at >= p_start_date
-    GROUP BY
-        COALESCE(p.name, p.email)
-    ORDER BY
-        COUNT(th.id) DESC
-    LIMIT p_limit;
-END;
-$$;
-
--- Function to get platform-wide popular clothing
-CREATE OR REPLACE FUNCTION get_platform_popular_clothing(
-    p_limit INT DEFAULT 10,
-    p_start_date TIMESTAMP WITH TIME ZONE DEFAULT '1970-01-01 00:00:00+00'
-)
-RETURNS TABLE (
-    clothing_image_url TEXT,
-    usage_count BIGINT
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        th.clothing_image_url,
-        COUNT(th.id) AS usage_count
-    FROM
-        tryon_history th
-    WHERE
-        th.clothing_image_url IS NOT NULL
-        AND th.created_at >= p_start_date
-    GROUP BY
-        th.clothing_image_url
-    ORDER BY
-        COUNT(th.id) DESC
-    LIMIT p_limit;
-END;
-$$;
-
--- Function to get platform-wide hourly usage pattern
-CREATE OR REPLACE FUNCTION get_platform_hourly_usage_pattern(
-    p_days_back INT DEFAULT 7
-)
-RETURNS TABLE (
-    hour_of_day INT,
-    total_tryons BIGINT,
-    avg_tryons NUMERIC
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        EXTRACT(HOUR FROM th.created_at)::INT AS hour_of_day,
-        COUNT(th.id) AS total_tryons,
-        COUNT(th.id)::NUMERIC / COUNT(DISTINCT DATE(th.created_at)) AS avg_tryons
-    FROM
-        tryon_history th
-    WHERE
-        th.created_at >= NOW() - INTERVAL '1 day' * p_days_back
-    GROUP BY
-        EXTRACT(HOUR FROM th.created_at)
-    ORDER BY
-        hour_of_day;
-END;
-$$;
-
--- Function to get platform-wide credit breakdown
-CREATE OR REPLACE FUNCTION get_platform_credit_breakdown(
-    p_start_date TIMESTAMP WITH TIME ZONE,
-    p_end_date TIMESTAMP WITH TIME ZONE
-)
-RETURNS TABLE (
-    transaction_type TEXT,
-    total_amount NUMERIC,
-    transaction_count BIGINT
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        ct.type AS transaction_type,
-        SUM(ct.amount) AS total_amount,
-        COUNT(ct.id) AS transaction_count
-    FROM
-        credit_transactions ct
-    WHERE
-        ct.created_at >= p_start_date AND ct.created_at <= p_end_date
-    GROUP BY
-        ct.type
-    ORDER BY
-        transaction_type;
-END;
-$$;
-
--- ============================================
--- STORE COMPARISON ANALYTICS FUNCTIONS
--- ============================================
-
--- Function to get comprehensive store comparison metrics
+-- Function 1: Get comprehensive store comparison metrics
 CREATE OR REPLACE FUNCTION get_store_comparison_metrics(
     p_start_date TIMESTAMP WITH TIME ZONE,
     p_end_date TIMESTAMP WITH TIME ZONE
@@ -181,6 +43,7 @@ RETURNS TABLE (
     peak_hour INT
 )
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $$
 BEGIN
     RETURN QUERY
@@ -273,7 +136,7 @@ BEGIN
 END;
 $$;
 
--- Function to get store performance trends (daily breakdown per store)
+-- Function 2: Get store performance trends
 CREATE OR REPLACE FUNCTION get_store_performance_trends(
     p_start_date TIMESTAMP WITH TIME ZONE,
     p_end_date TIMESTAMP WITH TIME ZONE,
@@ -288,6 +151,7 @@ RETURNS TABLE (
     unique_users BIGINT
 )
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $$
 BEGIN
     RETURN QUERY
@@ -313,11 +177,11 @@ BEGIN
 END;
 $$;
 
--- Function to get store rankings by various metrics
+-- Function 3: Get store rankings
 CREATE OR REPLACE FUNCTION get_store_rankings(
     p_start_date TIMESTAMP WITH TIME ZONE,
     p_end_date TIMESTAMP WITH TIME ZONE,
-    p_metric TEXT DEFAULT 'tryons' -- Options: 'tryons', 'users', 'credits', 'efficiency'
+    p_metric TEXT DEFAULT 'tryons'
 )
 RETURNS TABLE (
     rank BIGINT,
@@ -328,6 +192,7 @@ RETURNS TABLE (
     metric_name TEXT
 )
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $$
 BEGIN
     IF p_metric = 'tryons' THEN
@@ -426,7 +291,7 @@ BEGIN
 END;
 $$;
 
--- Function to get store health indicators
+-- Function 4: Get store health indicators
 CREATE OR REPLACE FUNCTION get_store_health_indicators(
     p_days_back INT DEFAULT 30
 )
@@ -436,12 +301,13 @@ RETURNS TABLE (
     health_score NUMERIC,
     is_active BOOLEAN,
     days_since_last_activity INT,
-    trend_direction TEXT, -- 'up', 'down', 'stable', 'inactive'
+    trend_direction TEXT,
     current_period_tryons BIGINT,
     previous_period_tryons BIGINT,
     growth_percentage NUMERIC
 )
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $$
 DECLARE
     v_start_date TIMESTAMP WITH TIME ZONE := NOW() - INTERVAL '1 day' * p_days_back;
@@ -510,13 +376,32 @@ BEGIN
 END;
 $$;
 
--- Grant usage to authenticated users for RPC functions (adjust as necessary)
-GRANT EXECUTE ON FUNCTION get_platform_analytics(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE) TO authenticated;
-GRANT EXECUTE ON FUNCTION get_platform_top_users(INT, TIMESTAMP WITH TIME ZONE) TO authenticated;
-GRANT EXECUTE ON FUNCTION get_platform_popular_clothing(INT, TIMESTAMP WITH TIME ZONE) TO authenticated;
-GRANT EXECUTE ON FUNCTION get_platform_hourly_usage_pattern(INT) TO authenticated;
-GRANT EXECUTE ON FUNCTION get_platform_credit_breakdown(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE) TO authenticated;
+-- Grant permissions to authenticated users
 GRANT EXECUTE ON FUNCTION get_store_comparison_metrics(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_store_performance_trends(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_store_rankings(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_store_health_indicators(INT) TO authenticated;
+
+-- Grant permissions to anon (if needed for public access)
+GRANT EXECUTE ON FUNCTION get_store_comparison_metrics(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE) TO anon;
+GRANT EXECUTE ON FUNCTION get_store_performance_trends(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, UUID) TO anon;
+GRANT EXECUTE ON FUNCTION get_store_rankings(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE, TEXT) TO anon;
+GRANT EXECUTE ON FUNCTION get_store_health_indicators(INT) TO anon;
+
+-- Verify functions were created
+SELECT
+    'SUCCESS! Function created: ' || routine_name AS status
+FROM information_schema.routines
+WHERE routine_name IN (
+    'get_store_comparison_metrics',
+    'get_store_performance_trends',
+    'get_store_rankings',
+    'get_store_health_indicators'
+)
+ORDER BY routine_name;
+
+-- Count total functions created
+SELECT
+    'Total functions created: ' || COUNT(*)::TEXT AS summary
+FROM information_schema.routines
+WHERE routine_name LIKE 'get_store%';
