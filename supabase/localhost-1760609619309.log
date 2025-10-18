@@ -1,0 +1,23 @@
+react-dom-client.development.js:25631 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+react-server-dom-webpack-client.browser.development.js:3423  Server   ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+react_stack_bottom_frame @ react-server-dom-webpack-client.browser.development.js:3423
+:3000/api/admin/stores/fe87f5c9-29d8-458b-b75d-ac008072060a:1  Failed to load resource: the server responded with a status of 403 (Forbidden)
+:3000/api/admin/stores/fe87f5c9-29d8-458b-b75d-ac008072060a:1  Failed to load resource: the server responded with a status of 403 (Forbidden)
+:3000/api/tryon:1  Failed to load resource: the server responded with a status of 402 (Payment Required)
+intercept-console-error.js:57 Try-on error: Error: Insufficient credits or failed to deduct credits
+    at handleTryOn (C:\Users\KITS\Documents\bhawna\virtual-tryon\components\MobileVirtualTryOn.tsx:134:15)
+error @ intercept-console-error.js:57
+warn-once.js:16 Image with src "https://v3b.fal.media/files/b/kangaroo/1v21wcQPPAzDG1KmTWHLv_Organza%20Cotton%20%26%20Silk%20Blend%20Saree%20Collection!%20%3F%3F%3F%20Flat%2015%25%20off%20sitewide%20for%20Vesak!%20Offer%20valid.jpg" has "fill" but is missing "sizes" prop. Please add it to improve page performance. Read more: https://nextjs.org/docs/api-reference/next/image#sizes
+warnOnce @ warn-once.js:16
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 978ms
+react-server-dom-webpack-client.browser.development.js:3423  Server   ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+react_stack_bottom_frame @ react-server-dom-webpack-client.browser.development.js:3423
+:3000/api/tryon:1  Failed to load resource: the server responded with a status of 402 (Payment Required)
+intercept-console-error.js:57 Try-on error: Error: new row violates row-level security policy for table "credit_transactions"
+    at handleTryOn (C:\Users\KITS\Documents\bhawna\virtual-tryon\components\MobileVirtualTryOn.tsx:134:15)
+error @ intercept-console-error.js:57
+warn-once.js:16 Image with src "https://rndlzoogkqpbczifafkj.supabase.co/storage/v1/object/public/store-gallery/fe87f5c9-29d8-458b-b75d-ac008072060a/clothing/1760601009054-images%20(1).jpg" has "fill" but is missing "sizes" prop. Please add it to improve page performance. Read more: https://nextjs.org/docs/api-reference/next/image#sizes
+warnOnce @ warn-once.js:16
