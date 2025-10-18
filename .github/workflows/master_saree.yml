@@ -60,6 +60,6 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'saree'
-          slot-name: 'Production'
+          slot-name: 'sareeProduction'
           package: .
           
