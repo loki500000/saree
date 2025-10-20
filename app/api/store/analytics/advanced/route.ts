@@ -234,11 +234,25 @@ export async function GET(request: NextRequest) {
       count,
     }));
 
+    // Get total credits purchased from credit_transactions
+    const { data: creditsPurchased, error: creditsError } = await supabase
+      .from('credit_transactions')
+      .select('amount')
+      .eq('store_id', user.store_id)
+      .eq('type', 'purchase');
+
+    const totalCreditsPurchased = creditsPurchased?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+
+    if (creditsError) {
+      console.error("Fetch credits purchased error:", creditsError);
+    }
+
     return NextResponse.json({
       period,
       metrics: {
         totalTryOns,
         totalCreditsUsed,
+        totalCreditsPurchased,
         uniqueUsers,
         avgCreditsPerUser: Number(avgCreditsPerUser.toFixed(2)),
         tryOnsChange: Number(tryOnsChange.toFixed(2)),

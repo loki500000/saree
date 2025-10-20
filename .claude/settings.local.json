@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install jspdf jspdf-autotable)",
+      "Bash(az account show)",
+      "Bash(az webapp config appsettings set --name sarees --resource-group backend_group --settings FAL_KEY=\"a8bae2a3-d4ac-4792-b399-ca8d285e1e2e:6cfcd7ac86a79c7ccdcab4266c682e11\" NEXT_PUBLIC_SUPABASE_URL=\"https://rndlzoogkqpbczifafkj.supabase.co\" NEXT_PUBLIC_SUPABASE_ANON_KEY=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuZGx6b29na3FwYmN6aWZhZmtqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NTIyMDgsImV4cCI6MjA3NjAyODIwOH0.QezYkhJWeEGlr48NAeA8ov9ZyuIAjNe3_ADjMT5gNcE\" SUPABASE_SERVICE_ROLE_KEY=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuZGx6b29na3FwYmN6aWZhZmtqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDQ1MjIwOCwiZXhwIjoyMDc2MDI4MjA4fQ.QVkXJ1-NziJnh1QDUIaB6U2Mc7kQujJ9nPiH_rNqj6k\" --output table)",
+      "Bash(npm install)",
+      "Bash(npm run build)",
+      "Bash(az webapp deploy --name sarees --resource-group backend_group --src-path . --type zip --async true)",
+      "Bash(az webapp list --output table)",
+      "Bash(az webapp config appsettings list --name sarees --resource-group backend_group --output table)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

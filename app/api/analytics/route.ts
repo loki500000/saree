@@ -112,12 +112,39 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Get total credits purchased from credit_transactions
+    const { data: creditsPurchased, error: creditsError } = await supabase
+      .from('credit_transactions')
+      .select('amount, created_at')
+      .eq('store_id', user.store_id)
+      .eq('type', 'purchase');
+
+    const totalCreditsPurchased = creditsPurchased?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+
+    // Also calculate credits purchased in the selected period
+    const periodCreditsPurchased = creditsPurchased
+      ?.filter(t => new Date(t.created_at) >= startDate)
+      ?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+
+    if (creditsError) {
+      console.error("Fetch credits purchased error:", creditsError);
+    }
+
+    // Get current credits balance
+    const { data: storeData } = await supabase
+      .from('stores')
+      .select('credits')
+      .eq('id', user.store_id)
+      .single();
+
     return NextResponse.json({
       period,
       overview: {
         total_tryons: totalTryons,
         unique_users: uniqueUsers,
         total_credits_used: totalCredits,
+        total_credits_purchased: periodCreditsPurchased,
+        current_credits: storeData?.credits || 0,
         active_days: activeDays,
         first_tryon: periodTryons?.[0]?.created_at || null,
         last_tryon: periodTryons?.[periodTryons.length - 1]?.created_at || null
@@ -127,6 +154,7 @@ export async function GET(request: NextRequest) {
         unique_users: 0,
         total_credits_used: 0
       },
+      allTimeCreditsPurchased: totalCreditsPurchased,
       chartData,
       popularClothing: enrichedClothing
     });

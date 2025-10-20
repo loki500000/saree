@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { detectPose, isPoseDetectionSupported } from '@/lib/poseDetection';
 
 interface StoreImage {
   id: string;
@@ -668,6 +669,8 @@ function UploadImageModal({ onClose, onSuccess }: {
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [poseExtracting, setPoseExtracting] = useState(false);
+  const [poseExtracted, setPoseExtracted] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -685,18 +688,40 @@ function UploadImageModal({ onClose, onSuccess }: {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return;
+    if (!file || !preview) return;
 
     setError('');
     setLoading(true);
 
     try {
+      // Extract pose from the image before uploading
+      let poseKeypoints = null;
+      if (isPoseDetectionSupported()) {
+        try {
+          setPoseExtracting(true);
+          console.log('Extracting pose from clothing image...');
+          poseKeypoints = await detectPose(preview);
+          setPoseExtracted(true);
+          console.log('Pose extracted successfully:', poseKeypoints ? 'success' : 'no pose detected');
+        } catch (error) {
+          console.error('Failed to extract pose:', error);
+          // Continue with upload even if pose extraction fails
+        } finally {
+          setPoseExtracting(false);
+        }
+      }
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('type', 'clothing');
       formData.append('name', name);
       formData.append('main_code', mainCode);
       formData.append('sub_variant', subVariant);
+
+      // Add pose keypoints if extracted
+      if (poseKeypoints) {
+        formData.append('pose_keypoints', JSON.stringify(poseKeypoints));
+      }
 
       const res = await fetch('/api/gallery/upload', {
         method: 'POST',
@@ -712,6 +737,7 @@ function UploadImageModal({ onClose, onSuccess }: {
       setError(err.message);
     } finally {
       setLoading(false);
+      setPoseExtracting(false);
     }
   };
 
@@ -804,11 +830,20 @@ function UploadImageModal({ onClose, onSuccess }: {
             </div>
           )}
 
+          {/* Pose extraction status */}
+          {poseExtracting && (
+            <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-4 py-2 rounded-lg">
+              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              <span>Extracting pose data...</span>
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 mt-6">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+              disabled={loading}
+              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
@@ -817,7 +852,7 @@ function UploadImageModal({ onClose, onSuccess }: {
               disabled={loading || !file}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading ? 'Uploading...' : 'Upload'}
+              {poseExtracting ? 'Extracting pose...' : loading ? 'Uploading...' : 'Upload'}
             </button>
           </div>
         </form>

@@ -5,8 +5,11 @@ import { requireSuperAdmin } from '@/lib/auth/helpers'
 // GET /api/admin/analytics/store-comparison
 export async function GET(request: Request) {
   try {
+    console.log('[Store Comparison] Starting request...')
+
     // Require super admin role
     const user = await requireSuperAdmin()
+    console.log('[Store Comparison] Authenticated user:', user.email, 'Role:', user.role)
 
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('startDate')
@@ -20,9 +23,13 @@ export async function GET(request: Request) {
     const end = endDate ? new Date(endDate) : new Date()
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
+    console.log('[Store Comparison] Date range:', start.toISOString(), 'to', end.toISOString())
+
     const supabase = await createClient()
+    console.log('[Store Comparison] Supabase client created')
 
     // Fetch comprehensive store comparison metrics
+    console.log('[Store Comparison] Calling get_store_comparison_metrics...')
     const { data: storeMetrics, error: metricsError } = await supabase
       .rpc('get_store_comparison_metrics', {
         p_start_date: start.toISOString(),
@@ -30,16 +37,24 @@ export async function GET(request: Request) {
       })
 
     if (metricsError) {
-      console.error('Error fetching store metrics:', metricsError)
+      console.error('[Store Comparison] ❌ Error fetching store metrics')
+      console.error('[Store Comparison] Error message:', metricsError.message)
+      console.error('[Store Comparison] Error code:', metricsError.code)
+      console.error('[Store Comparison] Error details:', metricsError.details)
+      console.error('[Store Comparison] Error hint:', metricsError.hint)
+      console.error('[Store Comparison] Full error object:', JSON.stringify(metricsError, null, 2))
       return NextResponse.json(
         {
-          error: 'Failed to fetch store comparison metrics',
-          details: metricsError.message,
-          hint: 'Please ensure the SQL functions are deployed. Run the SQL migration in supabase/platform_analytics.sql'
+          error: metricsError.message || 'Failed to fetch store comparison metrics',
+          details: metricsError.details,
+          code: metricsError.code,
+          hint: metricsError.hint
         },
         { status: 500 }
       )
     }
+
+    console.log('[Store Comparison] Store metrics fetched successfully. Count:', storeMetrics?.length || 0)
 
     // Fetch store rankings
     const { data: rankings, error: rankingsError } = await supabase

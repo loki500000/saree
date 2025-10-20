@@ -24,6 +24,26 @@ export async function createClient() {
           }
         },
       },
+      global: {
+        fetch: async (url, options = {}) => {
+          // Add timeout to all Supabase requests
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 second timeout
+
+          try {
+            const response = await fetch(url, {
+              ...options,
+              signal: controller.signal,
+            })
+            clearTimeout(timeoutId)
+            return response
+          } catch (error) {
+            clearTimeout(timeoutId)
+            console.error('Supabase server fetch error:', error)
+            throw error
+          }
+        },
+      },
     }
   )
 }

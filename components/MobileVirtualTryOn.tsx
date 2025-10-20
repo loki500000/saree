@@ -11,6 +11,8 @@ interface GalleryImage {
   name: string | null;
   main_code?: string;
   sub_variant?: string;
+  pose_keypoints?: PoseKeypoints | null;
+  pose_detection_failed?: boolean;
 }
 
 interface Store {
@@ -201,7 +203,19 @@ export default function MobileVirtualTryOn() {
     if (poseDetectionAvailable && userPose) {
       try {
         setPoseChecking(true);
-        const clothingPose = await detectPose(image.url);
+        let clothingPose = null;
+
+        // Use pre-computed pose if available
+        if (image.pose_keypoints) {
+          console.log('Using pre-computed pose from database');
+          clothingPose = image.pose_keypoints;
+        } else if (!image.pose_detection_failed) {
+          // Fallback to real-time detection if no pre-computed pose
+          console.log('No pre-computed pose, detecting in real-time...');
+          clothingPose = await detectPose(image.url);
+        } else {
+          console.log('Pose detection previously failed for this image');
+        }
 
         if (clothingPose) {
           const difference = comparePoses(userPose, clothingPose);
@@ -783,23 +797,35 @@ export default function MobileVirtualTryOn() {
                       </div>
                     )}
 
-                    {/* Try-On Button */}
-                    <button
-                      onClick={handleTryOn}
-                      disabled={loading || !poseMatched || poseChecking}
-                      className="w-full py-5 sm:py-6 rounded-xl sm:rounded-2xl font-bold text-lg sm:text-xl text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 shadow-2xl active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed hover:shadow-3xl"
-                    >
-                      <span className="text-xl sm:text-2xl mr-2">✨</span>
-                      Try It On!
-                    </button>
+                    {/* Try-On Button or Change Outfit Button */}
+                    {!poseMatched && !poseChecking ? (
+                      <button
+                        onClick={() => setClothingImageUrl("")}
+                        className="w-full py-5 sm:py-6 rounded-xl sm:rounded-2xl font-bold text-lg sm:text-xl text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 shadow-2xl active:scale-95 transition-transform hover:shadow-3xl"
+                      >
+                        <span className="text-xl sm:text-2xl mr-2">👕</span>
+                        Change Outfit
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleTryOn}
+                          disabled={loading || poseChecking}
+                          className="w-full py-5 sm:py-6 rounded-xl sm:rounded-2xl font-bold text-lg sm:text-xl text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 shadow-2xl active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed hover:shadow-3xl"
+                        >
+                          <span className="text-xl sm:text-2xl mr-2">✨</span>
+                          Try It On!
+                        </button>
 
-                    {/* Change Outfit Link */}
-                    <button
-                      onClick={() => setClothingImageUrl("")}
-                      className="w-full text-center text-violet-600 font-semibold text-xs sm:text-sm active:scale-95 transition-transform hover:text-violet-700"
-                    >
-                      ← Change Outfit
-                    </button>
+                        {/* Change Outfit Link */}
+                        <button
+                          onClick={() => setClothingImageUrl("")}
+                          className="w-full text-center text-violet-600 font-semibold text-xs sm:text-sm active:scale-95 transition-transform hover:text-violet-700"
+                        >
+                          ← Change Outfit
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -954,23 +980,35 @@ export default function MobileVirtualTryOn() {
                   </div>
                 )}
 
-                {/* Try-On Button */}
-                <button
-                  onClick={handleTryOn}
-                  disabled={loading || !poseMatched || poseChecking}
-                  className="w-full py-5 sm:py-6 rounded-xl sm:rounded-2xl font-bold text-lg sm:text-xl text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 shadow-2xl active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed"
-                >
-                  <span className="text-xl sm:text-2xl mr-2">✨</span>
-                  Try It On!
-                </button>
+                {/* Try-On Button or Change Outfit Button */}
+                {!poseMatched && !poseChecking ? (
+                  <button
+                    onClick={() => setClothingImageUrl("")}
+                    className="w-full py-5 sm:py-6 rounded-xl sm:rounded-2xl font-bold text-lg sm:text-xl text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 shadow-2xl active:scale-95 transition-transform"
+                  >
+                    <span className="text-xl sm:text-2xl mr-2">👕</span>
+                    Change Outfit
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleTryOn}
+                      disabled={loading || poseChecking}
+                      className="w-full py-5 sm:py-6 rounded-xl sm:rounded-2xl font-bold text-lg sm:text-xl text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 shadow-2xl active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed"
+                    >
+                      <span className="text-xl sm:text-2xl mr-2">✨</span>
+                      Try It On!
+                    </button>
 
-                {/* Change Outfit Link */}
-                <button
-                  onClick={() => setClothingImageUrl("")}
-                  className="w-full text-center text-violet-600 font-semibold text-xs sm:text-sm active:scale-95 transition-transform"
-                >
-                  ← Change Outfit
-                </button>
+                    {/* Change Outfit Link */}
+                    <button
+                      onClick={() => setClothingImageUrl("")}
+                      className="w-full text-center text-violet-600 font-semibold text-xs sm:text-sm active:scale-95 transition-transform"
+                    >
+                      ← Change Outfit
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>

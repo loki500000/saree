@@ -30,6 +30,7 @@ interface AnalyticsData {
   metrics: {
     totalTryOns: number;
     totalCreditsUsed: number;
+    totalCreditsPurchased?: number;
     uniqueUsers: number;
     avgCreditsPerUser: number;
     tryOnsChange?: number;
@@ -301,7 +302,12 @@ export default function AdvancedAnalyticsPage() {
                   </div>
                 </div>
                 <p className="text-4xl font-bold text-gray-900 mb-2">{analytics?.metrics?.totalCreditsUsed?.toLocaleString() || 0}</p>
-                <p className="text-sm text-gray-500 font-medium">Processing usage</p>
+                <p className="text-sm text-gray-500 font-medium">
+                  {analytics?.metrics?.totalCreditsPurchased ?
+                    `${analytics.metrics.totalCreditsPurchased.toLocaleString()} purchased` :
+                    'Processing usage'
+                  }
+                </p>
               </div>
 
               <div className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all border border-green-100 hover:border-green-300">

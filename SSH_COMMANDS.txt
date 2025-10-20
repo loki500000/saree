@@ -1,0 +1,30 @@
+# Copy these commands into your Azure SSH session
+
+# 1. Check current directory and contents
+cd /home/site/wwwroot
+pwd
+ls -la
+
+# 2. Check environment variables (should see your keys)
+env | grep FAL_KEY
+env | grep SUPABASE
+env | grep PORT
+
+# 3. Check if app is running
+ps aux | grep node
+
+# 4. View app logs
+cd /home/LogFiles
+ls -la
+tail -f Application/stdout*.log
+
+# Press Ctrl+C to stop viewing logs
+
+# 5. Check disk space
+df -h
+
+# After checking, exit SSH
+exit
+
+# Then run this on your Windows machine:
+az webapp deployment source config-zip --resource-group backend_group --name sarees --src C:\Users\KITS\Documents\newer\virtual-tryon\azure-clean-deploy.zip --timeout 1200

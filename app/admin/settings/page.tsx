@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 export default function SettingsPage() {
   const router = useRouter();
   const [poseTolerance, setPositTolerance] = useState(30);
+  const [creditPrice, setCreditPrice] = useState(10);
+  const [gstRate, setGstRate] = useState(18);
+  const [platformName, setPlatformName] = useState('Virtual Try-On');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -14,11 +17,22 @@ export default function SettingsPage() {
   useEffect(() => {
     async function fetchSettings() {
       try {
-        const response = await fetch('/api/settings');
-        const data = await response.json();
+        // Fetch pose settings
+        const poseResponse = await fetch('/api/settings');
+        const poseData = await poseResponse.json();
 
-        if (response.ok) {
-          setPositTolerance(data.pose_tolerance || 30);
+        if (poseResponse.ok) {
+          setPositTolerance(poseData.pose_tolerance || 30);
+        }
+
+        // Fetch admin settings
+        const adminResponse = await fetch('/api/admin/settings');
+        const adminData = await adminResponse.json();
+
+        if (adminResponse.ok && adminData.settings) {
+          setCreditPrice(adminData.settings.credit_price?.value || 10);
+          setGstRate((adminData.settings.gst_rate?.value || 0.18) * 100); // Convert to percentage
+          setPlatformName(adminData.settings.platform_name?.value || 'Virtual Try-On');
         }
       } catch (error) {
         console.error('Error fetching settings:', error);
@@ -35,7 +49,8 @@ export default function SettingsPage() {
     setMessage('');
 
     try {
-      const response = await fetch('/api/settings', {
+      // Save pose settings
+      const poseResponse = await fetch('/api/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -43,13 +58,29 @@ export default function SettingsPage() {
         body: JSON.stringify({ pose_tolerance: poseTolerance }),
       });
 
-      const data = await response.json();
+      // Save admin settings
+      const adminResponse = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          settings: {
+            credit_price: creditPrice,
+            gst_rate: gstRate / 100, // Convert percentage back to decimal
+            platform_name: platformName,
+          }
+        }),
+      });
 
-      if (response.ok) {
+      const poseData = await poseResponse.json();
+      const adminData = await adminResponse.json();
+
+      if (poseResponse.ok && adminResponse.ok) {
         setMessage('Settings saved successfully!');
         setTimeout(() => setMessage(''), 3000);
       } else {
-        setMessage(data.error || 'Failed to save settings');
+        setMessage(poseData.error || adminData.error || 'Failed to save settings');
       }
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -186,38 +217,136 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Message */}
-            {message && (
-              <div className={`p-4 rounded-lg ${
-                message.includes('success')
-                  ? 'bg-green-50 border border-green-200 text-green-800'
-                  : 'bg-red-50 border border-red-200 text-red-800'
-              }`}>
-                {message}
-              </div>
-            )}
+          </div>
+        </div>
 
-            {/* Save Button */}
-            <div className="flex justify-end pt-4 border-t border-gray-200">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-6 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-lg hover:from-violet-700 hover:to-fuchsia-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-              >
-                {saving ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Saving...
-                  </span>
-                ) : (
-                  'Save Settings'
-                )}
-              </button>
+        {/* Billing Configuration Section */}
+        <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Billing Configuration</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Configure pricing and billing settings for credit purchases
+            </p>
+          </div>
+
+          <div className="p-6 space-y-6">
+            {/* Credit Price */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Price per Credit (₹)
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-semibold">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={creditPrice}
+                  onChange={(e) => setCreditPrice(parseFloat(e.target.value) || 0)}
+                  className="pl-8 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="10.00"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                This is the price charged for each credit purchased
+              </p>
+            </div>
+
+            {/* GST Rate */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                GST Rate (%)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={gstRate}
+                  onChange={(e) => setGstRate(parseFloat(e.target.value) || 0)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="18"
+                />
+                <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 font-semibold">
+                  %
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                GST tax rate applied to invoices (e.g., 18 for 18% GST)
+              </p>
+            </div>
+
+            {/* Platform Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Platform Name
+              </label>
+              <input
+                type="text"
+                value={platformName}
+                onChange={(e) => setPlatformName(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                placeholder="Virtual Try-On"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Company name displayed on invoices
+              </p>
+            </div>
+
+            {/* Billing Preview */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Billing Preview</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">100 Credits @ ₹{creditPrice.toFixed(2)}</span>
+                  <span className="font-medium">₹{(100 * creditPrice).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">GST ({gstRate}%)</span>
+                  <span className="font-medium">₹{(100 * creditPrice * (gstRate / 100)).toFixed(2)}</span>
+                </div>
+                <div className="border-t border-gray-300 pt-2 flex justify-between">
+                  <span className="font-semibold text-gray-900">Total</span>
+                  <span className="font-semibold text-violet-600">₹{(100 * creditPrice * (1 + gstRate / 100)).toFixed(2)}</span>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+
+        {/* Message */}
+        {message && (
+          <div className={`mt-6 p-4 rounded-lg ${
+            message.includes('success')
+              ? 'bg-green-50 border border-green-200 text-green-800'
+              : 'bg-red-50 border border-red-200 text-red-800'
+          }`}>
+            {message}
+          </div>
+        )}
+
+        {/* Save Button */}
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-8 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold rounded-lg hover:from-violet-700 hover:to-fuchsia-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+          >
+            {saving ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+              </span>
+            ) : (
+              'Save All Settings'
+            )}
+          </button>
         </div>
 
         {/* Info Panel */}

@@ -79,6 +79,15 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center gap-3">
               <button
+                onClick={() => router.push('/admin/billing')}
+                className="px-4 py-2 text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Billing
+              </button>
+              <button
                 onClick={() => router.push('/admin/analytics/store-comparison')}
                 className="px-4 py-2 text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
               >
@@ -384,6 +393,33 @@ function AddCreditsModal({ store, onClose, onSuccess }: { store: Store; onClose:
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pricePerCredit, setPricePerCredit] = useState(10);
+  const [gstRate, setGstRate] = useState(0.18);
+
+  // Fetch billing settings on mount
+  useEffect(() => {
+    async function fetchSettings() {
+      try {
+        const res = await fetch('/api/admin/settings');
+        const data = await res.json();
+
+        if (res.ok && data.settings) {
+          setPricePerCredit(data.settings.credit_price?.value ?? 10);
+          setGstRate(data.settings.gst_rate?.value ?? 0.18);
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      }
+    }
+    fetchSettings();
+  }, []);
+
+  const calculateTotal = () => {
+    const subtotal = amount * pricePerCredit;
+    const tax = subtotal * gstRate;
+    const total = subtotal + tax;
+    return { subtotal, tax, total };
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -394,12 +430,18 @@ function AddCreditsModal({ store, onClose, onSuccess }: { store: Store; onClose:
       const res = await fetch(`/api/admin/stores/${store.id}/credits`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, description }),
+        body: JSON.stringify({ amount, description, generateInvoice: true }),
       });
 
       const data = await res.json();
 
       if (!res.ok) throw new Error(data.error);
+
+      // If invoice is provided, download it
+      if (data.invoice?.invoiceUrl) {
+        // Open invoice in new tab
+        window.open(data.invoice.invoiceUrl, '_blank');
+      }
 
       onSuccess();
     } catch (err: any) {
@@ -429,7 +471,7 @@ function AddCreditsModal({ store, onClose, onSuccess }: { store: Store; onClose:
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Amount
+              Credits Amount
             </label>
             <input
               type="number"
@@ -439,6 +481,7 @@ function AddCreditsModal({ store, onClose, onSuccess }: { store: Store; onClose:
               onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
             />
+            <p className="text-xs text-gray-500 mt-1">₹{pricePerCredit.toFixed(2)} per credit</p>
           </div>
 
           <div>
@@ -452,6 +495,27 @@ function AddCreditsModal({ store, onClose, onSuccess }: { store: Store; onClose:
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
               placeholder="Monthly credit purchase"
             />
+          </div>
+
+          {/* Billing Summary */}
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-2">
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Billing Summary</h3>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Credits:</span>
+              <span className="font-medium">{amount}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Subtotal:</span>
+              <span className="font-medium">₹{calculateTotal().subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">GST ({(gstRate * 100).toFixed(0)}%):</span>
+              <span className="font-medium">₹{calculateTotal().tax.toFixed(2)}</span>
+            </div>
+            <div className="border-t border-purple-300 pt-2 mt-2 flex justify-between">
+              <span className="font-bold text-gray-900">Total Amount:</span>
+              <span className="font-bold text-purple-600">₹{calculateTotal().total.toFixed(2)}</span>
+            </div>
           </div>
 
           <div className="bg-green-50 border border-green-200 rounded p-3">

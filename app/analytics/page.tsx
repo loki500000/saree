@@ -22,6 +22,8 @@ interface AnalyticsOverview {
   total_tryons: number;
   unique_users: number;
   total_credits_used: number;
+  total_credits_purchased: number;
+  current_credits: number;
   active_days: number;
   first_tryon: string | null;
   last_tryon: string | null;
@@ -49,6 +51,7 @@ interface AnalyticsData {
     unique_users: number;
     total_credits_used: number;
   };
+  allTimeCreditsPurchased: number;
   chartData: ChartDataPoint[];
   popularClothing: PopularClothing[];
 }
@@ -70,6 +73,7 @@ export default function AnalyticsPage() {
   const [error, setError] = useState('');
   const [period, setPeriod] = useState('30d');
   const [activeView, setActiveView] = useState<'overview' | 'clothing' | 'user'>('overview');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Clothing pagination and search
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,15 +86,18 @@ export default function AnalyticsPage() {
   const [detailData, setDetailData] = useState<any>(null);
 
   useEffect(() => {
-    checkAuth();
+    const initAuth = async () => {
+      await checkAuth();
+    };
+    initAuth();
   }, []);
 
   useEffect(() => {
-    if (!loading) {
+    if (isAuthenticated && !loading) {
       fetchAnalytics();
       fetchUsers();
     }
-  }, [period, loading]);
+  }, [period, isAuthenticated, loading]);
 
   useEffect(() => {
     setCurrentPage(1); // Reset to page 1 when search changes
@@ -98,6 +105,7 @@ export default function AnalyticsPage() {
 
   const checkAuth = async () => {
     try {
+      setLoading(true);
       const res = await fetch('/api/auth/me', {
         credentials: 'include'
       });
@@ -112,8 +120,10 @@ export default function AnalyticsPage() {
         router.push('/login');
         return;
       }
+      setIsAuthenticated(true);
       setLoading(false);
     } catch (error) {
+      console.error('Auth check error:', error);
       router.push('/login');
     }
   };
@@ -361,8 +371,15 @@ export default function AnalyticsPage() {
                   <StatsCard
                     title="Credits Used"
                     value={data.overview.total_credits_used}
+                    subtitle={`${data.overview.total_credits_purchased || 0} purchased`}
                     icon="credit"
                     color="purple"
+                  />
+                  <StatsCard
+                    title="Available Credits"
+                    value={data.overview.current_credits}
+                    icon="wallet"
+                    color="blue"
                   />
                   <StatsCard
                     title="Active Days"
@@ -598,7 +615,7 @@ export default function AnalyticsPage() {
 }
 
 // Stats Card Component
-function StatsCard({ title, value, icon, color }: { title: string; value: number; icon: string; color: string }) {
+function StatsCard({ title, value, subtitle, icon, color }: { title: string; value: number; subtitle?: string; icon: string; color: string }) {
   const colorClasses = {
     blue: { bg: 'bg-blue-100', text: 'text-blue-600' },
     green: { bg: 'bg-green-100', text: 'text-green-600' },
@@ -619,6 +636,9 @@ function StatsCard({ title, value, icon, color }: { title: string; value: number
     credit: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     ),
+    wallet: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+    ),
     calendar: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
     )
@@ -632,6 +652,7 @@ function StatsCard({ title, value, icon, color }: { title: string; value: number
         <div>
           <p className="text-sm font-medium text-gray-600 uppercase">{title}</p>
           <p className="text-3xl font-bold text-gray-900 mt-2">{value.toLocaleString()}</p>
+          {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
         </div>
         <div className={`w-12 h-12 ${colors.bg} rounded-lg flex items-center justify-center`}>
           <svg className={`w-6 h-6 ${colors.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">

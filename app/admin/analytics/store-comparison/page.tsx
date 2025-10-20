@@ -250,19 +250,8 @@ export default function StoreComparisonPage() {
                 </svg>
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-red-900 mb-2">Setup Required</h2>
+                <h2 className="text-xl font-bold text-red-900 mb-2">Error Loading Data</h2>
                 <p className="text-red-700 mb-4">{error}</p>
-                <div className="bg-white rounded-lg p-4 border border-red-200">
-                  <h3 className="font-semibold text-gray-900 mb-2">To fix this issue:</h3>
-                  <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-                    <li>Open your Supabase dashboard</li>
-                    <li>Navigate to SQL Editor</li>
-                    <li>Open the file: <code className="bg-gray-100 px-2 py-1 rounded">supabase/platform_analytics.sql</code></li>
-                    <li>Copy lines 154-522 (the new SQL functions)</li>
-                    <li>Paste and run in Supabase SQL Editor</li>
-                    <li>Return here and click the refresh button</li>
-                  </ol>
-                </div>
                 <div className="mt-4 flex gap-3">
                   <button
                     onClick={fetchData}

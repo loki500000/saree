@@ -70,9 +70,23 @@ export async function GET(request: NextRequest) {
       console.error("Fetch recent activity error:", activityError);
     }
 
+    // Get total credits purchased from credit_transactions
+    const { data: creditsPurchased, error: creditsError } = await supabase
+      .from('credit_transactions')
+      .select('amount')
+      .eq('store_id', user.store_id)
+      .eq('type', 'purchase');
+
+    const totalCreditsPurchased = creditsPurchased?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+
+    if (creditsError) {
+      console.error("Fetch credits purchased error:", creditsError);
+    }
+
     return NextResponse.json({
       totalTryOns: storeOverview?.total_tryons || 0,
       totalCreditsUsed: storeOverview?.total_credits_used || 0,
+      totalCreditsPurchased: totalCreditsPurchased,
       currentCredits: storeOverview?.current_credits || 0,
       totalUsers: storeOverview?.total_users || 0,
       personImages: storeOverview?.person_images || 0,

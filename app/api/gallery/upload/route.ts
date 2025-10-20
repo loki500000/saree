@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     const name = formData.get("name") as string | null;
     const main_code = formData.get("main_code") as string;
     const sub_variant = formData.get("sub_variant") as string;
+    const poseKeypointsStr = formData.get("pose_keypoints") as string | null;
 
     if (!file) {
       return NextResponse.json(
@@ -104,6 +105,21 @@ export async function POST(request: NextRequest) {
     // Auto-generate display name as main_code + sub_variant
     const displayName = name || `${main_code}${sub_variant}`;
 
+    // Parse pose keypoints if provided
+    let poseKeypoints = null;
+    let poseDetectionFailed = false;
+    let poseDetectedAt = null;
+
+    if (poseKeypointsStr) {
+      try {
+        poseKeypoints = JSON.parse(poseKeypointsStr);
+        poseDetectedAt = new Date().toISOString();
+      } catch (error) {
+        console.error('Failed to parse pose keypoints:', error);
+        poseDetectionFailed = true;
+      }
+    }
+
     // Save metadata to database
     const { data: imageData, error: dbError } = await supabase
       .from('store_images')
@@ -115,6 +131,9 @@ export async function POST(request: NextRequest) {
         main_code: main_code.trim(),
         sub_variant: sub_variant.toLowerCase(),
         uploaded_by: user.id,
+        pose_keypoints: poseKeypoints,
+        pose_detected_at: poseDetectedAt,
+        pose_detection_failed: poseDetectionFailed,
       })
       .select()
       .single();

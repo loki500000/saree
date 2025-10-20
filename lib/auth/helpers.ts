@@ -2,31 +2,54 @@ import { createClient } from "@/lib/supabase/server";
 import { AuthUser, Profile } from "@/lib/types/database";
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Add timeout wrapper for auth check
+    const { data: { user }, error: authError } = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<{ data: { user: null }, error: Error }>((_, reject) =>
+        setTimeout(() => reject(new Error('Auth timeout')), 60000)
+      ),
+    ]).catch((err) => {
+      console.error('Auth error:', err.message);
+      return { data: { user: null }, error: err };
+    });
 
-  if (authError || !user) {
+    if (authError || !user) {
+      return null;
+    }
+
+    // Add timeout wrapper for profile fetch
+    const { data: profile, error: profileError } = await Promise.race([
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single(),
+      new Promise<{ data: null, error: Error }>((_, reject) =>
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 60000)
+      ),
+    ]).catch((err) => {
+      console.error('Profile fetch error:', err.message);
+      return { data: null, error: err };
+    });
+
+    if (profileError || !profile) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      email: profile.email,
+      role: profile.role,
+      store_id: profile.store_id,
+      name: profile.name,
+    };
+  } catch (error) {
+    console.error('Get current user error:', error);
     return null;
   }
-
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
-
-  if (profileError || !profile) {
-    return null;
-  }
-
-  return {
-    id: user.id,
-    email: profile.email,
-    role: profile.role,
-    store_id: profile.store_id,
-    name: profile.name,
-  };
 }
 
 export async function requireAuth(): Promise<AuthUser> {
